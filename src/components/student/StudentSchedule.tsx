@@ -64,60 +64,62 @@ export function StudentSchedule() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1>My Schedule</h1>
-        <p className="text-muted-foreground mt-1">
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold text-foreground">My Schedule</h1>
+        <p className="text-base text-muted-foreground">
           View your class schedule and upcoming lessons
         </p>
       </div>
 
       {/* Today's Classes */}
-      <Card className="card-effect">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+      <Card className="card-effect border-border">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
             Today's Classes
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm">
             Your schedule for today
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {todayClasses.map((classItem) => (
-            <div key={classItem.id} className="flex items-center gap-4 p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-primary" />
+            <div key={classItem.id} className="flex items-center gap-4 p-4 border border-border rounded-lg bg-card hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <BookOpen className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-medium">{classItem.subject}</h3>
-                  <Badge variant="outline">{classItem.status}</Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-semibold text-base text-foreground">{classItem.subject}</h3>
+                  <Badge variant="outline" className="text-xs font-medium">{classItem.status}</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{classItem.teacher}</p>
-                <p className="text-sm text-muted-foreground">{classItem.topic}</p>
+                <p className="text-sm text-muted-foreground mb-1">{classItem.teacher}</p>
+                <p className="text-sm text-foreground font-medium">{classItem.topic}</p>
               </div>
-              <div className="text-right">
-                <div className="flex items-center gap-1 text-sm mb-1">
-                  <Clock className="h-3 w-3" />
+              <div className="text-right space-y-2 flex-shrink-0">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   {classItem.time}
                 </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
                   {classItem.room}
                 </div>
               </div>
-              <Button size="sm">Join Class</Button>
+              <Button size="sm" className="flex-shrink-0">Join Class</Button>
             </div>
           ))}
         </CardContent>
       </Card>
 
       {/* Weekly Schedule */}
-      <Card className="card-effect">
-        <CardHeader>
-          <CardTitle>Weekly Schedule</CardTitle>
-          <CardDescription>
+      <Card className="card-effect border-border">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold">Weekly Schedule</CardTitle>
+          <CardDescription className="text-sm">
             Your complete week schedule
           </CardDescription>
         </CardHeader>
@@ -125,22 +127,22 @@ export function StudentSchedule() {
           <div className="space-y-6">
             {weekSchedule.map((day, index) => (
               <div key={index} className="space-y-3">
-                <h3 className="font-medium text-lg">{day.day}</h3>
-                <div className="grid gap-3">
+                <h3 className="font-semibold text-base text-foreground pb-2 border-b border-border">{day.day}</h3>
+                <div className="space-y-2">
                   {day.classes.map((classItem, classIndex) => (
-                    <div key={classIndex} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <div key={classIndex} className="flex items-center justify-between p-4 bg-secondary/50 border border-border rounded-lg hover:bg-secondary transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
                         <div>
-                          <span className="font-medium">{classItem.subject}</span>
-                          <p className="text-sm text-muted-foreground">{classItem.teacher}</p>
+                          <span className="font-medium text-foreground">{classItem.subject}</span>
+                          <p className="text-sm text-muted-foreground mt-1">{classItem.teacher}</p>
                         </div>
                       </div>
-                      <div className="text-sm font-medium">{classItem.time}</div>
+                      <div className="text-sm font-medium text-foreground">{classItem.time}</div>
                     </div>
                   ))}
                   {day.classes.length === 0 && (
-                    <div className="text-center py-4 text-muted-foreground">
+                    <div className="text-center py-6 text-sm text-muted-foreground bg-secondary/30 rounded-lg">
                       No classes scheduled
                     </div>
                   )}

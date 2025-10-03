@@ -16,7 +16,7 @@ export function StudentDashboard() {
       <div className="flex h-screen bg-background">
         <StudentSidebar />
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
+          <div className="p-8 max-w-7xl mx-auto">
             <Routes>
               <Route path="/" element={<Navigate to="/student/dashboard" replace />} />
               <Route path="/dashboard" element={<StudentDashboardHome />} />

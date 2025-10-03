@@ -7,7 +7,7 @@ import { Progress } from '../ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Input } from '../ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { BookOpen, Clock, Trophy, MessageCircle, Calendar, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Plus, GraduationCap } from 'lucide-react';
+import { BookOpen, Clock, Trophy, MessageCircle, Calendar, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Plus, GraduationCap, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { studentAPI } from '../../services/api';
@@ -212,18 +212,18 @@ export function StudentDashboardHome() {
   ];
 
   return (
-    <div className={`space-y-6 ${animationClass}`}>
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="slide-in-left">
-          <h1>
-            <span className="animate-gradient-text">Welcome back, {user?.name?.split(' ')[0]}!</span>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">
+            Welcome back, {user?.name?.split(' ')[0]}!
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-base text-muted-foreground">
             Ready to continue your learning journey today?
           </p>
         </div>
-        <Button asChild className="btn-3d gradient-bg hover-glow ripple-effect slide-in-right">
+        <Button asChild className="gradient-bg">
           <Link to="/student/doubts">
             <MessageCircle className="h-4 w-4 mr-2" />
             Ask a Question
@@ -232,51 +232,50 @@ export function StudentDashboardHome() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 scale-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
-          
+
           if (stat.isAction) {
             return (
               <Dialog key={index} open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
                 <DialogTrigger asChild>
-                  <Card 
-                    className="card-effect hover-lift card-tilt transition-all duration-300 cursor-pointer aspect-square glass-effect magnetic-hover"
-                    style={{ animationDelay: `${index * 0.1}s` }}
+                  <Card
+                    className="card-effect hover-lift transition-all cursor-pointer border-border"
                   >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                      <CardTitle className="text-sm font-medium">
+                      <CardTitle className="text-sm font-medium text-foreground">
                         {stat.title}
                       </CardTitle>
-                      <div className={`h-10 w-10 ${stat.color} rounded-lg flex items-center justify-center btn-3d animate-bounce-gentle`}>
-                        <Icon className="h-5 w-5 text-white animate-breathe" />
+                      <div className={`h-10 w-10 ${stat.color} rounded-lg flex items-center justify-center`}>
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold animate-gradient-text">
+                      <div className="text-3xl font-bold text-foreground">
                         {stat.value}
                       </div>
                     </CardContent>
                   </Card>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg glass-effect">
+                <DialogContent className="sm:max-w-lg">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
-                      <div className="h-10 w-10 gradient-bg-purple rounded-lg flex items-center justify-center btn-3d animate-breathe">
+                    <DialogTitle className="flex items-center gap-3 text-xl">
+                      <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
                         <Calendar className="h-5 w-5 text-white" />
                       </div>
-                      <span className="animate-gradient-text">Today's Full Schedule</span>
+                      <span className="font-semibold">Today's Full Schedule</span>
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-sm">
                       Your complete schedule for today, {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
                     {todaySchedule.map((item, index) => (
-                      <div key={index} className={`p-4 rounded-lg border glass-effect hover-lift transition-all duration-300 ${item.type === 'break' ? 'bg-muted/50' : 'bg-card'}`}>
+                      <div key={index} className={`p-4 rounded-lg border border-border ${item.type === 'break' ? 'bg-secondary/50' : 'bg-card'}`}>
                         {item.type === 'break' ? (
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 bg-muted-foreground rounded-full animate-pulse-color"></div>
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
                             <div>
                               <h3 className="font-medium text-muted-foreground">{item.subject}</h3>
                               <p className="text-sm text-muted-foreground">{item.time}</p>
@@ -284,19 +283,19 @@ export function StudentDashboardHome() {
                           </div>
                         ) : (
                           <div className="flex items-start gap-3">
-                            <div className="w-3 h-3 bg-primary rounded-full mt-2 animate-pulse-color"></div>
+                            <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
                             <div className="flex-1">
-                              <div className="flex justify-between items-start mb-1">
-                                <h3 className="font-medium">{item.subject}</h3>
-                                <Badge variant="outline" className="text-xs animate-pulse-color">
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="font-semibold text-foreground">{item.subject}</h3>
+                                <Badge variant="outline" className="text-xs">
                                   {item.status}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mb-1">{item.teacher}</p>
-                              <p className="text-sm font-medium text-primary mb-1">{item.time}</p>
+                              <p className="text-sm font-medium text-primary mb-2">{item.time}</p>
                               <div className="flex gap-4 text-sm text-muted-foreground">
-                                <span>📍 {item.room}</span>
-                                <span>📚 {item.topic}</span>
+                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {item.room}</span>
+                                <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {item.topic}</span>
                               </div>
                             </div>
                           </div>
@@ -305,7 +304,7 @@ export function StudentDashboardHome() {
                     ))}
                   </div>
                   <div className="flex justify-end">
-                    <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)} className="btn-3d glass-effect">
+                    <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
                       Close
                     </Button>
                   </div>
@@ -313,30 +312,29 @@ export function StudentDashboardHome() {
               </Dialog>
             );
           }
-          
+
           return (
-            <Card 
-              key={index} 
-              className="card-effect hover-lift card-tilt transition-all duration-300 aspect-square glass-effect magnetic-hover"
-              style={{ animationDelay: `${index * 0.1}s` }}
+            <Card
+              key={index}
+              className="card-effect hover-lift transition-all border-border"
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-sm font-medium text-foreground">
                   {stat.title}
                 </CardTitle>
-                <div className={`h-10 w-10 ${stat.color} rounded-lg flex items-center justify-center btn-3d animate-bounce-gentle`}>
-                  <Icon className="h-5 w-5 text-white animate-breathe" />
+                <div className={`h-10 w-10 ${stat.color} rounded-lg flex items-center justify-center`}>
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold animate-gradient-text">
+                <div className="text-3xl font-bold text-foreground">
                   {stat.value}
                   {stat.total && <span className="text-lg text-muted-foreground font-normal">/{stat.total}</span>}
                 </div>
                 {stat.total && (
-                  <Progress 
-                    value={(parseInt(stat.value) / parseInt(stat.total)) * 100} 
-                    className="mt-2 shimmer" 
+                  <Progress
+                    value={(parseInt(stat.value) / parseInt(stat.total)) * 100}
+                    className="mt-3"
                   />
                 )}
               </CardContent>
@@ -347,26 +345,26 @@ export function StudentDashboardHome() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Assignments */}
-        <Card className="glass-effect card-tilt hover-lift slide-in-left">
-          <CardHeader>
-            <CardTitle className="animate-gradient-text">Recent Assignments</CardTitle>
-            <CardDescription>
+        <Card className="card-effect border-border">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold">Recent Assignments</CardTitle>
+            <CardDescription className="text-sm">
               Your latest assignments and their status
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {recentAssignments.map((assignment) => (
-              <div key={assignment.id} className="flex items-center justify-between p-4 border rounded-lg glass-effect hover-lift transition-all duration-300 magnetic-hover">
-                <div className="space-y-1">
-                  <h3 className="font-medium">{assignment.title}</h3>
+              <div key={assignment.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-foreground">{assignment.title}</h3>
                   <p className="text-sm text-muted-foreground">{assignment.subject}</p>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs animate-pulse-color">
+                    <Badge variant="outline" className="text-xs font-medium">
                       Due: {assignment.dueDate}
                     </Badge>
-                    <Badge 
+                    <Badge
                       variant={assignment.status === 'completed' ? 'default' : 'secondary'}
-                      className="text-xs animate-pulse-color"
+                      className="text-xs font-medium"
                     >
                       {assignment.status}
                     </Badge>
@@ -374,11 +372,11 @@ export function StudentDashboardHome() {
                 </div>
                 <div className="text-right">
                   {assignment.score ? (
-                    <div className="text-lg font-bold text-green-600 animate-breathe">
+                    <div className="text-xl font-bold text-green-600">
                       {assignment.score}%
                     </div>
                   ) : (
-                    <Button variant="outline" size="sm" className="btn-3d hover-glow">
+                    <Button variant="outline" size="sm">
                       Start
                     </Button>
                   )}
@@ -389,56 +387,56 @@ export function StudentDashboardHome() {
         </Card>
 
         {/* Join New Class */}
-        <Card className="glass-effect card-tilt hover-lift slide-in-right">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 animate-breathe" />
-              <span className="animate-gradient-text">Join New Class</span>
+        <Card className="card-effect border-border">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <span>Enrolled Classes</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Your enrolled classes and join new ones
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {enrolledClasses.map((classItem, index) => (
-              <div key={index} className="flex items-center gap-4 p-3 border rounded-lg glass-effect hover-lift transition-all duration-300 magnetic-hover">
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center btn-3d animate-bounce-gentle">
-                  <BookOpen className="h-6 w-6 text-primary animate-breathe" />
+              <div key={index} className="flex items-center gap-4 p-4 border border-border rounded-lg hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium">{classItem.subject}</h3>
-                    <Badge variant="outline" className="text-xs animate-pulse-color">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-foreground">{classItem.subject}</h3>
+                    <Badge variant="outline" className="text-xs font-medium">
                       {classItem.id}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{classItem.teacher}</p>
-                  <p className="text-sm text-muted-foreground">{classItem.students} students • Next: {classItem.nextClass}</p>
+                  <p className="text-sm text-muted-foreground mb-1">{classItem.teacher}</p>
+                  <p className="text-xs text-muted-foreground">{classItem.students} students • Next: {classItem.nextClass}</p>
                 </div>
-                <div className="text-right">
-                  <Badge variant="default" className="text-xs animate-pulse-color">
+                <div className="flex-shrink-0">
+                  <Badge variant="default" className="text-xs font-medium">
                     {classItem.status}
                   </Badge>
                 </div>
               </div>
             ))}
-            
+
             <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="w-full btn-3d glass-effect hover-glow ripple-effect">
+                <Button variant="outline" className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
                   Join New Class
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md glass-effect">
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-3">
-                    <div className="h-10 w-10 gradient-bg rounded-lg flex items-center justify-center btn-3d animate-breathe">
+                  <DialogTitle className="flex items-center gap-3 text-xl">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
                       <GraduationCap className="h-5 w-5 text-white" />
                     </div>
-                    <span className="animate-gradient-text">Join New Class</span>
+                    <span className="font-semibold">Join New Class</span>
                   </DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-sm">
                     Enter the Class ID provided by your teacher to join a new class.
                   </DialogDescription>
                 </DialogHeader>
@@ -452,7 +450,6 @@ export function StudentDashboardHome() {
                       placeholder="Enter Class ID (e.g., MATH101)"
                       value={classId}
                       onChange={(e) => setClassId(e.target.value)}
-                      className="glass-effect transition-all duration-300 focus:shadow-lg focus:shadow-primary/20"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleJoinClass();
@@ -464,14 +461,13 @@ export function StudentDashboardHome() {
                     <Button
                       variant="outline"
                       onClick={() => setIsJoinDialogOpen(false)}
-                      className="btn-3d glass-effect"
                     >
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleJoinClass}
                       disabled={isJoiningClass}
-                      className="btn-3d gradient-bg hover-glow"
+                      className="gradient-bg"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       {isJoiningClass ? 'Joining...' : 'Join Class'}
@@ -486,10 +482,10 @@ export function StudentDashboardHome() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Learning Progress */}
-        <Card className="glass-effect card-tilt hover-lift slide-in-left">
-          <CardHeader>
-            <CardTitle className="animate-gradient-text">Learning Progress</CardTitle>
-            <CardDescription>
+        <Card className="card-effect border-border">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold">Learning Progress</CardTitle>
+            <CardDescription className="text-sm">
               Your progress across different topics
             </CardDescription>
           </CardHeader>
@@ -497,41 +493,43 @@ export function StudentDashboardHome() {
             {learningProgress.map((item, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{item.subject}</span>
-                  <span className="text-sm text-muted-foreground">{item.progress}%</span>
+                  <span className="text-sm font-semibold text-foreground">{item.subject}</span>
+                  <span className="text-sm font-medium text-muted-foreground">{item.progress}%</span>
                 </div>
-                <Progress value={item.progress} className="h-2 shimmer" />
+                <Progress value={item.progress} className="h-2" />
               </div>
             ))}
           </CardContent>
         </Card>
 
         {/* Recent Achievements */}
-        <Card className="glass-effect card-tilt hover-lift slide-in-right">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500 animate-breathe" />
-              <span className="animate-gradient-text">Recent Achievements</span>
+        <Card className="card-effect border-border">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              <span>Recent Achievements</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Your latest accomplishments
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {recentAchievements.map((achievement, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg glass-effect hover-lift transition-all duration-300 magnetic-hover">
-                <div className="text-2xl">{achievement.icon}</div>
+              <div key={index} className="flex items-start gap-4 p-4 bg-secondary/50 border border-border rounded-lg">
+                <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                </div>
                 <div className="flex-1">
-                  <h3 className="font-medium">{achievement.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-1">
+                  <h3 className="font-semibold text-foreground mb-1">{achievement.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
                     {achievement.description}
                   </p>
                   <p className="text-xs text-muted-foreground">{achievement.date}</p>
                 </div>
               </div>
             ))}
-            
-            <Button variant="outline" className="w-full btn-3d glass-effect hover-glow">
+
+            <Button variant="outline" className="w-full">
               View All Achievements
             </Button>
           </CardContent>
@@ -539,46 +537,52 @@ export function StudentDashboardHome() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="glass-effect card-tilt hover-lift slide-in-left">
-        <CardHeader>
-          <CardTitle className="animate-gradient-text">Quick Actions</CardTitle>
-          <CardDescription>
+      <Card className="card-effect border-border">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
+          <CardDescription className="text-sm">
             Things you can do right now
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link to="/student/assignments">
-              <Card className="hover:shadow-md transition-all duration-300 cursor-pointer glass-effect hover-lift card-tilt magnetic-hover">
-                <CardContent className="flex items-center gap-3 p-6">
-                  <BookOpen className="h-8 w-8 text-primary animate-breathe" />
+              <Card className="hover:shadow-md transition-shadow cursor-pointer border-border">
+                <CardContent className="flex items-center gap-4 p-6">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="h-6 w-6 text-primary" />
+                  </div>
                   <div>
-                    <h3 className="font-medium">View Assignments</h3>
-                    <p className="text-sm text-muted-foreground">Check pending tasks</p>
+                    <h3 className="font-semibold text-foreground">View Assignments</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Check pending tasks</p>
                   </div>
                 </CardContent>
               </Card>
             </Link>
-            
+
             <Link to="/student/doubts">
-              <Card className="hover:shadow-md transition-all duration-300 cursor-pointer glass-effect hover-lift card-tilt magnetic-hover">
-                <CardContent className="flex items-center gap-3 p-6">
-                  <MessageCircle className="h-8 w-8 text-primary animate-breathe" />
+              <Card className="hover:shadow-md transition-shadow cursor-pointer border-border">
+                <CardContent className="flex items-center gap-4 p-6">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="h-6 w-6 text-primary" />
+                  </div>
                   <div>
-                    <h3 className="font-medium">Ask a Question</h3>
-                    <p className="text-sm text-muted-foreground">Get help from AI</p>
+                    <h3 className="font-semibold text-foreground">Ask a Question</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Get help from AI</p>
                   </div>
                 </CardContent>
               </Card>
             </Link>
-            
+
             <Link to="/student/progress">
-              <Card className="hover:shadow-md transition-all duration-300 cursor-pointer glass-effect hover-lift card-tilt magnetic-hover">
-                <CardContent className="flex items-center gap-3 p-6">
-                  <Trophy className="h-8 w-8 text-primary animate-breathe" />
+              <Card className="hover:shadow-md transition-shadow cursor-pointer border-border">
+                <CardContent className="flex items-center gap-4 p-6">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Trophy className="h-6 w-6 text-primary" />
+                  </div>
                   <div>
-                    <h3 className="font-medium">Track Progress</h3>
-                    <p className="text-sm text-muted-foreground">See your improvement</p>
+                    <h3 className="font-semibold text-foreground">Track Progress</h3>
+                    <p className="text-sm text-muted-foreground mt-1">See your improvement</p>
                   </div>
                 </CardContent>
               </Card>

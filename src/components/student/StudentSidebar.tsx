@@ -69,20 +69,20 @@ export function StudentSidebar() {
 
   return (
     <Sidebar className="sidebar-gradient">
-      <SidebarHeader className="border-b-2 border-gradient-to-r from-purple-200 to-pink-200 gradient-bg-subtle">
+      <SidebarHeader className="border-b gradient-bg-subtle">
         <div className="flex items-center gap-3 px-4 py-4">
-          <div className="h-14 w-14 rounded-xl overflow-hidden shadow-xl ring-3 ring-pink-300 animate-pulse-color">
-            <img 
-              src={sahayakLogo} 
-              alt="Sahayak AI" 
+          <div className="h-10 w-10 rounded-lg overflow-hidden shadow-sm">
+            <img
+              src={sahayakLogo}
+              alt="Sahayak AI"
               className="h-full w-full object-contain"
             />
           </div>
           <div className="grid flex-1 text-left leading-tight">
-            <span className="truncate font-bold text-lg bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Sahayak AI âœ¨</span>
-            <span className="truncate text-sm text-sidebar-foreground/80 font-semibold">ðŸŽ’ Student Portal</span>
+            <span className="truncate font-semibold text-base text-foreground">Sahayak AI</span>
+            <span className="truncate text-xs text-muted-foreground">Student Portal</span>
           </div>
-          <SidebarTrigger className="-mr-1 hover-scale" />
+          <SidebarTrigger className="-mr-1" />
         </div>
       </SidebarHeader>
       
