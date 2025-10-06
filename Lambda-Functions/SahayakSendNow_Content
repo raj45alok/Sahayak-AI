@@ -1,0 +1,155 @@
+import json
+import boto3
+from datetime import datetime
+from decimal import Decimal
+
+# Initialize clients
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+lambda_client = boto3.client('lambda', region_name='us-east-1')
+
+CONTENT_TABLE = 'sahayak-content'
+content_table = dynamodb.Table(CONTENT_TABLE)
+
+def decimal_to_native(obj):
+    """Convert DynamoDB Decimal types to native Python types"""
+    if isinstance(obj, list):
+        return [decimal_to_native(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_native(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
+
+def cors_response(status_code, body):
+    """Helper to return response with CORS headers"""
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
+        },
+        'body': json.dumps(decimal_to_native(body))
+    }
+
+def lambda_handler(event, context):
+    """
+    Manually trigger immediate delivery of a scheduled part
+    
+    Input:
+    {
+        "contentId": "CNT-xxx",
+        "partNumber": "PART-1",
+        "teacherId": "TCH-001" (optional, for logging)
+    }
+    
+    Returns: Delivery status
+    """
+    
+    # Handle OPTIONS for CORS
+    if event.get('httpMethod') == 'OPTIONS':
+        return cors_response(200, {'message': 'OK'})
+    
+    try:
+        body = json.loads(event['body']) if 'body' in event else event
+        
+        content_id = body.get('contentId')
+        part_number = body.get('partNumber')
+        teacher_id = body.get('teacherId', 'unknown')
+        
+        if not content_id or not part_number:
+            raise Exception("contentId and partNumber are required")
+        
+        print(f"Manual delivery requested by {teacher_id}: {content_id}/{part_number}")
+        
+        # Verify part exists and is scheduled
+        part_response = content_table.get_item(
+            Key={'contentId': content_id, 'partNumber': part_number}
+        )
+        
+        if 'Item' not in part_response:
+            raise Exception(f"Part not found: {content_id}/{part_number}")
+        
+        part_item = part_response['Item']
+        current_status = part_item.get('status', '')
+        
+        # Check if already delivered
+        if current_status == 'delivered':
+            return cors_response(200, {
+                'message': 'Content already delivered',
+                'contentId': content_id,
+                'partNumber': part_number,
+                'status': 'delivered',
+                'deliveredAt': part_item.get('deliveredAt', '')
+            })
+        
+        # Verify it's scheduled
+        if current_status != 'scheduled':
+            raise Exception(f"Part is not scheduled. Current status: {current_status}")
+        
+        # Get master record for class info
+        master_response = content_table.get_item(
+            Key={'contentId': content_id, 'partNumber': 'MASTER'}
+        )
+        
+        if 'Item' not in master_response:
+            raise Exception(f"Master record not found: {content_id}")
+        
+        master_item = master_response['Item']
+        class_id = master_item.get('classId')
+        subject = master_item.get('subject')
+        
+        print(f"Triggering immediate delivery for class {class_id}, subject {subject}")
+        
+        # Invoke the SahayakDeliverContent Lambda directly (synchronously)
+        delivery_payload = {
+            'contentId': content_id,
+            'partNumber': part_number,
+            'manualTrigger': True,
+            'triggeredBy': teacher_id
+        }
+        
+        try:
+            response = lambda_client.invoke(
+                FunctionName='SahayakDeliverContent',
+                InvocationType='RequestResponse',  # Synchronous
+                Payload=json.dumps(delivery_payload)
+            )
+            
+            response_payload = json.loads(response['Payload'].read())
+            print(f"Delivery Lambda response: {response_payload}")
+            
+            # Parse the response
+            if response_payload.get('statusCode') == 200:
+                body_data = json.loads(response_payload.get('body', '{}'))
+                
+                return cors_response(200, {
+                    'message': 'Content delivered successfully',
+                    'contentId': content_id,
+                    'partNumber': part_number,
+                    'status': 'delivered',
+                    'emailsSent': body_data.get('emailsSent', 0),
+                    'studentCount': body_data.get('studentCount', 0),
+                    'deliveredAt': datetime.utcnow().isoformat()
+                })
+            else:
+                raise Exception(f"Delivery Lambda failed: {response_payload}")
+                
+        except Exception as invoke_error:
+            print(f"Failed to invoke delivery Lambda: {str(invoke_error)}")
+            raise Exception(f"Failed to trigger delivery: {str(invoke_error)}")
+        
+    except Exception as e:
+        print(f"Send Now error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return cors_response(500, {
+            'error': str(e),
+            'message': 'Failed to send content immediately'
+        })
