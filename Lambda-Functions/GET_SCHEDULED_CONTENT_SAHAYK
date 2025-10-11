@@ -1,0 +1,174 @@
+import json
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+from datetime import datetime
+from decimal import Decimal
+import pytz
+
+# Initialize DynamoDB
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+CONTENT_TABLE_NAME = 'sahayak-content'
+USERS_TABLE_NAME = 'Users'
+
+content_table = dynamodb.Table(CONTENT_TABLE_NAME)
+users_table = dynamodb.Table(USERS_TABLE_NAME)
+
+IST = pytz.timezone('Asia/Kolkata')
+
+def decimal_to_native(obj):
+    """Convert DynamoDB Decimal types to native Python types"""
+    if isinstance(obj, list):
+        return [decimal_to_native(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_native(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
+
+def cors_response(status_code, body):
+    """Helper to return response with CORS headers"""
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
+        },
+        'body': json.dumps(decimal_to_native(body))
+    }
+
+def lambda_handler(event, context):
+    """
+    Get all scheduled content for a teacher across all classes
+    
+    Input:
+    {
+        "teacherId": "TCH-xxx"
+    }
+    
+    Returns list of scheduled content with metadata
+    """
+    
+    # Handle OPTIONS for CORS
+    if event.get('httpMethod') == 'OPTIONS':
+        return cors_response(200, {'message': 'OK'})
+    
+    try:
+        body = json.loads(event['body']) if 'body' in event else event
+        
+        teacher_id = body.get('teacherId')
+        
+        if not teacher_id:
+            raise Exception("teacherId is required")
+        
+        print(f"Fetching scheduled content for teacher: {teacher_id}")
+        
+        # Scan content table for MASTER records with status 'scheduled' filtered by teacherId
+        scan_params = {
+            'FilterExpression': Attr('partNumber').eq('MASTER') & 
+                               Attr('status').eq('scheduled') &
+                               Attr('teacherId').eq(teacher_id)
+        }
+        
+        response = content_table.scan(**scan_params)
+        items = response.get('Items', [])
+        
+        # Handle pagination if needed
+        while 'LastEvaluatedKey' in response:
+            response = content_table.scan(
+                **scan_params,
+                ExclusiveStartKey=response['LastEvaluatedKey']
+            )
+            items.extend(response.get('Items', []))
+        
+        print(f"Found {len(items)} scheduled content items")
+        
+        # Format response
+        scheduled_content = []
+        for item in items:
+            content_id = item['contentId']
+            
+            # Get all parts to count total and check delivery status
+            parts_response = content_table.query(
+                KeyConditionExpression=Key('contentId').eq(content_id) & Key('partNumber').begins_with('PART-')
+            )
+            
+            parts = parts_response.get('Items', [])
+            
+            # Count parts by status
+            pending_parts = []
+            delivered_parts = []
+            
+            for p in parts:
+                part_status = p.get('status', 'pending')
+                part_data = {
+                    'partNumber': p['partNumber'],
+                    'summary': p.get('summary', 'Part ' + p['partNumber'].replace('PART-', '')),
+                    'scheduledDate': p.get('scheduleDate', ''),
+                    'deliveryTime': p.get('deliveryTimeIST', '08:00'),
+                    'status': part_status,
+                    'deliveredAt': p.get('deliveredAt', '')
+                }
+                
+                if part_status == 'delivered':
+                    delivered_parts.append(part_data)
+                else:
+                    pending_parts.append(part_data)
+            
+            # Determine overall status
+            total_parts = len(parts)
+            if len(delivered_parts) == total_parts and total_parts > 0:
+                overall_status = 'completed'
+            elif len(delivered_parts) > 0:
+                overall_status = 'in_progress'
+            else:
+                overall_status = 'scheduled'
+            
+            # Combine parts (delivered first, then pending)
+            all_parts = delivered_parts + pending_parts
+            
+            scheduled_content.append({
+                'contentId': content_id,
+                'subject': item.get('subject', 'Unknown'),
+                'classId': item.get('classId', 'Unknown'),
+                'totalParts': total_parts,
+                'deliveredParts': len(delivered_parts),
+                'pendingParts': len(pending_parts),
+                'startDate': item.get('scheduleStartDate', ''),
+                'endDate': item.get('scheduleEndDate', ''),
+                'deliveryTime': item.get('deliveryTimeIST', '08:00'),
+                'intervalDays': item.get('intervalDays', 2),
+                'scheduledAt': item.get('scheduledDate', ''),
+                'status': overall_status,
+                'parts': all_parts
+            })
+        
+        # Sort by most recent first
+        scheduled_content.sort(
+            key=lambda x: x.get('scheduledAt', ''), 
+            reverse=True
+        )
+        
+        # CRITICAL: Convert all Decimals before returning
+        scheduled_content = decimal_to_native(scheduled_content)
+        
+        return cors_response(200, {
+            'teacherId': teacher_id,
+            'totalScheduled': len(scheduled_content),
+            'scheduledContent': scheduled_content
+        })
+        
+    except Exception as e:
+        print(f"Error fetching scheduled content: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return cors_response(500, {
+            'error': str(e),
+            'message': 'Failed to fetch scheduled content'
+        })

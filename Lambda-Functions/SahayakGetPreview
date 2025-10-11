@@ -1,0 +1,247 @@
+import json
+import boto3
+from decimal import Decimal
+from datetime import datetime
+
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+table = dynamodb.Table('sahayak-content')
+
+class DecimalEncoder(json.JSONEncoder):
+    """Helper to convert DynamoDB Decimal to JSON"""
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
+def lambda_handler(event, context):
+    """
+    Fetch content preview for teacher to review before scheduling
+    Also handles teacher edits to content
+    
+    GET Request - Fetch Preview:
+    Input: {"contentId": "CNT-xxx"}
+    
+    POST Request - Update Content:
+    Input: {
+        "contentId": "CNT-xxx",
+        "action": "update",
+        "partNumber": "PART-1",
+        "updates": {
+            "enhancedContent": "...",
+            "videoLinks": [...],
+            "practiceQuestions": [...]
+        }
+    }
+    """
+    
+    try:
+        # Determine HTTP method
+        http_method = event.get('httpMethod', 'GET')
+        
+        # Parse input
+        body = json.loads(event['body']) if 'body' in event else event
+        content_id = body.get('contentId')
+        
+        if not content_id:
+            raise Exception("contentId is required")
+        
+        # Handle UPDATE request
+        if http_method == 'POST' and body.get('action') == 'update':
+            return handle_update(body)
+        
+        # Handle GET request (fetch preview)
+        return handle_get_preview(content_id)
+        
+    except Exception as e:
+        print(f"Error in lambda: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            'body': json.dumps({
+                'error': str(e),
+                'message': 'Failed to process request'
+            })
+        }
+
+def handle_get_preview(content_id):
+    """Fetch content preview"""
+    
+    print(f"Fetching preview for: {content_id}")
+    
+    # Query all items with this contentId
+    response = table.query(
+        KeyConditionExpression='contentId = :cid',
+        ExpressionAttributeValues={':cid': content_id}
+    )
+    
+    items = response.get('Items', [])
+    
+    if not items:
+        return {
+            'statusCode': 404,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'error': 'Content not found',
+                'contentId': content_id
+            })
+        }
+    
+    # Separate master and parts
+    master = None
+    parts = []
+    
+    for item in items:
+        if item['partNumber'] == 'MASTER':
+            master = item
+        else:
+            # Extract what frontend needs for preview
+            parts.append({
+                'partNumber': item['partNumber'],
+                'summary': item.get('summary', ''),
+                'estimatedStudyTime': item.get('estimatedStudyTime', 45),
+                'enhancedContent': item.get('enhancedContent', ''),
+                'videoLinks': item.get('videoLinks', []),
+                'practiceQuestions': item.get('practiceQuestions', []),
+                'hasDiagrams': item.get('hasDiagrams', False),
+                'status': item.get('status', 'unknown'),
+                'contentAnalysis': item.get('contentAnalysis', {}),
+                'rawContent': item.get('rawContent', '')  # Include for editing reference
+            })
+    
+    # Sort parts by part number
+    parts.sort(key=lambda x: x['partNumber'])
+    
+    # Check if content is ready for preview
+    if not master:
+        status = 'unknown'
+    else:
+        status = master.get('status', 'unknown')
+    
+    # Count how many parts are enhanced
+    enhanced_count = sum(1 for p in parts if p['status'] in ['enhanced', 'scheduled', 'delivered', 'ready_for_preview'])
+    
+    print(f"Preview status: {status}, Enhanced: {enhanced_count}/{len(parts)}")
+    
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+        },
+        'body': json.dumps({
+            'contentId': content_id,
+            'status': status,
+            'subject': master.get('subject') if master else '',
+            'classId': master.get('classId') if master else '',
+            'teacherId': master.get('teacherId') if master else '',
+            'totalParts': len(parts),
+            'enhancedParts': enhanced_count,
+            'instructions': master.get('instructions') if master else '',
+            'language': master.get('language') if master else 'hindi',
+            'contentSource': master.get('contentSource') if master else '',
+            'createdAt': master.get('createdAt') if master else '',
+            'parts': parts,
+            'isReadyForScheduling': status in ['ready_for_preview', 'scheduled'] and enhanced_count == len(parts),
+            'canEdit': status not in ['delivered', 'scheduled']  # Can't edit after scheduling
+        }, cls=DecimalEncoder)
+    }
+
+def handle_update(body):
+    """Handle teacher edits to content"""
+    
+    content_id = body['contentId']
+    part_number = body.get('partNumber')
+    updates = body.get('updates', {})
+    
+    if not part_number:
+        raise Exception("partNumber is required for updates")
+    
+    print(f"Updating {content_id} - {part_number}")
+    
+    # Check if content is already scheduled/delivered
+    master_response = table.get_item(
+        Key={'contentId': content_id, 'partNumber': 'MASTER'}
+    )
+    
+    if 'Item' not in master_response:
+        raise Exception("Content not found")
+    
+    master = master_response['Item']
+    
+    if master.get('status') in ['scheduled', 'delivered']:
+        return {
+            'statusCode': 400,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({
+                'error': 'Cannot edit content that is already scheduled or delivered',
+                'status': master.get('status')
+            })
+        }
+    
+    # Build update expression dynamically
+    update_expression_parts = []
+    expression_attribute_values = {}
+    expression_attribute_names = {}
+    
+    timestamp = datetime.utcnow().isoformat()
+    
+    # Always update timestamp
+    update_expression_parts.append('#updatedAt = :time')
+    expression_attribute_names['#updatedAt'] = 'updatedAt'
+    expression_attribute_values[':time'] = timestamp
+    
+    # Update enhanced content if provided
+    if 'enhancedContent' in updates:
+        update_expression_parts.append('enhancedContent = :content')
+        expression_attribute_values[':content'] = updates['enhancedContent']
+    
+    # Update video links if provided
+    if 'videoLinks' in updates:
+        update_expression_parts.append('videoLinks = :videos')
+        expression_attribute_values[':videos'] = updates['videoLinks']
+    
+    # Update practice questions if provided
+    if 'practiceQuestions' in updates:
+        update_expression_parts.append('practiceQuestions = :questions')
+        expression_attribute_values[':questions'] = updates['practiceQuestions']
+    
+    # Update summary if provided
+    if 'summary' in updates:
+        update_expression_parts.append('summary = :summary')
+        expression_attribute_values[':summary'] = updates['summary']
+    
+    # Mark as manually edited
+    update_expression_parts.append('manuallyEdited = :edited')
+    expression_attribute_values[':edited'] = True
+    
+    update_expression = 'SET ' + ', '.join(update_expression_parts)
+    
+    # Perform update
+    table.update_item(
+        Key={
+            'contentId': content_id,
+            'partNumber': part_number
+        },
+        UpdateExpression=update_expression,
+        ExpressionAttributeValues=expression_attribute_values,
+        ExpressionAttributeNames=expression_attribute_names if expression_attribute_names else None
+    )
+    
+    print(f"Successfully updated {part_number}")
+    
+    # Return updated preview
+    return handle_get_preview(content_id)

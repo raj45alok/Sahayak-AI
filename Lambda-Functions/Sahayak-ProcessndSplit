@@ -1,0 +1,150 @@
+import json
+import boto3
+import base64
+import uuid
+from datetime import datetime
+
+# Initialize clients
+s3 = boto3.client('s3', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+lambda_client = boto3.client('lambda', region_name='us-east-1')
+
+BUCKET_NAME = 'sahayak-study-content'
+TABLE_NAME = 'sahayak-content'
+
+table = dynamodb.Table(TABLE_NAME)
+
+def lambda_handler(event, context):
+    """
+    Fast upload handler - returns immediately with contentId
+    Triggers async processing in background
+    """
+    
+    cors_headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Content-Type': 'application/json'
+    }
+    
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': cors_headers,
+            'body': json.dumps({'message': 'CORS preflight'})
+        }
+    
+    try:
+        if 'body' in event:
+            body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
+        else:
+            body = event
+        
+        print(f"Processing content for teacher: {body.get('teacherId')}")
+        
+        # Generate content ID
+        content_id = f"CNT-{uuid.uuid4().hex[:8]}"
+        timestamp = datetime.utcnow().isoformat()
+        s3_key = None
+        content_source = "unknown"
+        
+        # Handle PDF upload to S3 (only this part - fast!)
+        if 'pdfBase64' in body:
+            content_source = "pdf_base64"
+            pdf_base64 = body['pdfBase64']
+            
+            if pdf_base64.startswith("data:"):
+                pdf_base64 = pdf_base64.split(",")[1]
+            
+            pdf_data = base64.b64decode(pdf_base64)
+            s3_key = f"uploads/{content_id}/original.pdf"
+            
+            s3.put_object(
+                Bucket=BUCKET_NAME,
+                Key=s3_key,
+                Body=pdf_data,
+                ContentType='application/pdf'
+            )
+            print(f"PDF uploaded to s3://{BUCKET_NAME}/{s3_key}")
+            
+        elif 's3Key' in body:
+            content_source = "s3_presigned"
+            s3_key = body['s3Key']
+            print(f"Using existing S3 file: {s3_key}")
+            
+        elif 'textContent' in body:
+            text_input = body['textContent']
+            if len(text_input) >= 500:
+                content_source = "text_direct"
+            else:
+                content_source = "knowledge_base"
+            print(f"Text content source: {content_source}")
+        else:
+            raise Exception("Must provide one of: pdfBase64, s3Key, or textContent")
+        
+        # Create MASTER record with 'uploading' status
+        table.put_item(Item={
+            'contentId': content_id,
+            'partNumber': 'MASTER',
+            'teacherId': body['teacherId'],
+            'classId': body['classId'],
+            'subject': body['subject'],
+            'totalParts': body['numParts'],
+            'instructions': body.get('instructions', ''),
+            'language': body.get('language', 'hindi'),
+            'contentSource': content_source,
+            'originalS3Path': s3_key or '',
+            'status': 'uploading',  # Initial status
+            'createdAt': timestamp,
+            'updatedAt': timestamp
+        })
+        
+        # Trigger async processing Lambda
+        async_payload = {
+            'contentId': content_id,
+            'teacherId': body['teacherId'],
+            'classId': body['classId'],
+            'subject': body['subject'],
+            'numParts': body['numParts'],
+            'instructions': body.get('instructions', ''),
+            'language': body.get('language', 'hindi'),
+            'contentSource': content_source,
+            's3Key': s3_key,
+            'textContent': body.get('textContent', '')
+        }
+        
+        lambda_client.invoke(
+            FunctionName='SahayakProcessTextract',  # Lambda 2 name
+            InvocationType='Event',  # Async
+            Payload=json.dumps(async_payload)
+        )
+        
+        print(f"Async processing triggered for {content_id}")
+        
+        # Return immediately
+        return {
+            'statusCode': 200,
+            'headers': cors_headers,
+            'body': json.dumps({
+                'contentId': content_id,
+                'totalParts': body['numParts'],
+                'status': 'processing',
+                'contentSource': content_source,
+                'message': 'Content uploaded, processing in background',
+                'estimatedTime': '1-2 minutes'
+            })
+        }
+        
+    except Exception as e:
+        print(f"Error in fast upload: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return {
+            'statusCode': 500,
+            'headers': cors_headers,
+            'body': json.dumps({
+                'error': str(e),
+                'message': 'Failed to upload content'
+            })
+        }

@@ -1,0 +1,93 @@
+// Update your i18n types file (e.g., src/types/i18n.ts or src/i18n/types.ts)
+
+export type TranslationKey = 
+  // App
+  | 'app.title'
+  // Common
+  | 'common.back'
+  | 'common.loading'
+  // Navigation
+  | 'nav.home'
+  | 'nav.about'
+  | 'nav.login'
+  | 'nav.logout'
+  | 'nav.register'
+  // Language
+  | 'language.english'
+  | 'language.hindi'
+  // Home
+  | 'home.hero.title'
+  | 'home.hero.subtitle'
+  | 'home.hero.description'
+  | 'home.hero.getStarted'
+  | 'home.hero.learnMore'
+  | 'home.features.title'
+  | 'home.features.subtitle'
+  | 'home.features.aiPowered'
+  | 'home.features.aiPoweredDesc'
+  | 'home.features.personalized'
+  | 'home.features.personalizedDesc'
+  | 'home.features.comprehensive'
+  | 'home.features.comprehensiveDesc'
+  | 'home.features.accessible'
+  | 'home.features.accessibleDesc'
+  | 'home.cta.title'
+  | 'home.cta.description'
+  | 'home.cta.startTrial'
+  | 'home.cta.signIn'
+  // About
+  | 'about.title'
+  | 'about.description'
+  | 'about.mission.title'
+  | 'about.mission.description'
+  | 'about.vision.title'
+  | 'about.vision.description'
+  | 'about.values.title'
+  | 'about.values.innovation'
+  | 'about.values.innovationDesc'
+  | 'about.values.accessibility'
+  | 'about.values.accessibilityDesc'
+  | 'about.values.excellence'
+  | 'about.values.excellenceDesc'
+  // Auth - Login
+  | 'auth.login.title'
+  | 'auth.login.subtitle'
+  | 'auth.login.email'
+  | 'auth.login.password'
+  | 'auth.login.asTeacher'
+  | 'auth.login.asStudent'
+  | 'auth.login.signInWith'
+  | 'auth.login.google'
+  | 'auth.login.fillAllFields'
+  | 'auth.login.welcomeBack'
+  | 'auth.login.error'
+  | 'auth.login.googleComingSoon'
+  // Auth - Register
+  | 'auth.register.title'
+  | 'auth.register.teacher'
+  | 'auth.register.student'
+  | 'auth.register.backToHome'
+  | 'auth.register.joinSahayak'
+  | 'auth.register.createAccountDesc'
+  | 'auth.register.chooseAccountType'
+  | 'auth.register.fillRequiredFields'
+  | 'auth.register.provideClassInfo'
+  | 'auth.register.fillStudentDetails'
+  | 'auth.register.welcomeMessage'
+  | 'auth.register.error'
+  | 'auth.register.creating'
+  | 'auth.register.createTeacherAccount'
+  | 'auth.register.createStudentAccount'
+  // Auth - Logout
+  | 'auth.logout.success'
+  // Teacher
+  | 'teacher.dashboard.title'
+  | 'teacher.sidebar.dashboard'
+  | 'teacher.sidebar.worksheets'
+  | 'teacher.sidebar.contentEnhancer'
+  | 'teacher.sidebar.schedule'
+  | 'teacher.sidebar.performance'
+  | 'teacher.sidebar.doubts';
+
+// Alternative approach: Use a more flexible type if you have many keys
+// export type TranslationKey = string;
